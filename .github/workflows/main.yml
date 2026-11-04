@@ -14,22 +14,56 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    # 1. Ekstrak file zip yang terunggah di repositori
+    - name: Ekstrak File Proyek ZIP
+      run: |
+        if [ -f "Gaming_Hub_Project.zip" ]; then
+          echo "Menemukan Gaming_Hub_Project.zip, mengekstrak..."
+          unzip -o Gaming_Hub_Project.zip -d .
+        else
+          echo "Mencari file .zip lain..."
+          unzip -o *.zip -d . || echo "Tidak ada file zip ditemukan!"
+        fi
+        echo "=== Isi folder setelah diekstrak ==="
+        ls -la
+
+    # 2. Setup Java versi terbaru (@v5) tanpa cache otomatis agar aman
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: 'zulu'
         java-version: '17'
-        cache: 'gradle'
+        cache: ''
 
-    - name: Grant Execute Permission for Gradle
-      run: chmod +x gradlew
+    # 3. Beri izin eksekusi pada script gradlew yang baru diekstrak
+    - name: Beri Izin Eksekusi Gradle
+      run: |
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+        elif [ -f "Gaming_Hub_Project/gradlew" ]; then
+          cd Gaming_Hub_Project && chmod +x gradlew
+        else
+          echo "File gradlew tidak ditemukan!"
+          exit 1
+        fi
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    # 4. Kompilasi proyek menjadi APK
+    - name: Kompilasi APK Debug
+      run: |
+        if [ -f "gradlew" ]; then
+          ./gradlew assembleDebug
+        elif [ -f "Gaming_Hub_Project/gradlew" ]; then
+          cd Gaming_Hub_Project && ./gradlew assembleDebug
+        else
+          echo "Gagal kompilasi: Struktur proyek salah."
+          exit 1
+        fi
 
-    - name: Rename and Upload APK Artifact
+    # 5. Ambil hasil build dan ubah namanya menjadi Gaming_Hub-V1.apk
+    - name: Unggah Hasil APK
       uses: actions/upload-artifact@v4
       with:
         name: Gaming_Hub-V1
-        path: app/build/outputs/apk/debug/app-debug.apk
-        
+        path: |
+          app/build/outputs/apk/debug/app-debug.apk
+          **/build/outputs/apk/debug/*.apk
