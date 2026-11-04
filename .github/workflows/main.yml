@@ -14,7 +14,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 1. Ekstrak file zip yang terunggah di repositori
+    # 1. Ekstrak file zip yang terunggah
     - name: Ekstrak File Proyek ZIP
       run: |
         if [ -f "Gaming_Hub_Project.zip" ]; then
@@ -25,14 +25,12 @@ jobs:
           unzip -o *.zip -d . || echo "Tidak ada file zip ditemukan!"
         fi
         
-        # Jika hasil ekstrak terbungkus folder, keluarkan semua represents ke root utama
-        if [ -d "Gaming_Hub_Project" ] && [ -f "Gaming_Hub_Project/gradlew" ]; then
+        # Jika hasil ekstrak terbungkus folder, keluarkan semua ke root utama
+        if [ -d "Gaming_Hub_Project" ]; then
           echo "Memindahkan file dari dalam folder Gaming_Hub_Project ke root..."
           mv Gaming_Hub_Project/* . || true
           mv Gaming_Hub_Project/.* . || true
         fi
-        echo "=== Isi folder root utama ==="
-        ls -la
 
     # 2. Setup Java versi terbaru (@v5)
     - name: Set up JDK 17
@@ -42,17 +40,14 @@ jobs:
         java-version: '17'
         cache: ''
 
-    # 3. Perbaiki format teks dan beri izin eksekusi pada script gradlew
-    - name: Perbaiki Format dan Izin Eksekusi Gradle
+    # 3. Generate ulang file gradlew yang rusak menggunakan Gradle bawaan environment runner
+    - name: Regenerasi File Gradlew Resmi
       run: |
-        if [ -f "gradlew" ]; then
-          echo "Memperbaiki format baris teks Windows (CRLF) ke Linux (LF)..."
-          sed -i 's/\r$//' gradlew
-          chmod +x gradlew
-        else
-          echo "File gradlew tidak ditemukan!"
-          exit 1
-        fi
+        echo "Menghapus gradlew lama yang rusak..."
+        rm -f gradlew
+        echo "Membuat ulang gradlew yang bersih dan kompatibel dengan Linux..."
+        gradle wrapper --gradle-version 8.2
+        chmod +x gradlew
 
     # 4. Kompilasi proyek menjadi APK
     - name: Kompilasi APK Debug
@@ -64,4 +59,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Gaming_Hub-V1
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: |
+          app/build/outputs/apk/debug/app-debug.apk
+          **/build/outputs/apk/debug/*.apk
