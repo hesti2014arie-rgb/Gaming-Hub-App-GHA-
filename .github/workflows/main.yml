@@ -32,7 +32,7 @@ jobs:
           mv Gaming_Hub_Project/.* . || true
         fi
 
-    # 2. Setup Java versi terbaru (@v5)
+    # 2. Setup Java versi 17 (@v5)
     - name: Set up JDK 17
       uses: actions/setup-java@v5
       with:
@@ -40,19 +40,19 @@ jobs:
         java-version: '17'
         cache: ''
 
-    # 3. Generate ulang file gradlew yang rusak menggunakan Gradle bawaan environment runner
+    # 3. Regenerasi File Gradlew Resmi
     - name: Regenerasi File Gradlew Resmi
       run: |
-        echo "Menghapus gradlew lama yang rusak..."
         rm -f gradlew
-        echo "Membuat ulang gradlew yang bersih dan kompatibel dengan Linux..."
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
 
-    # 4. Kompilasi proyek menjadi APK
+    # 4. Kompilasi proyek menjadi APK (Dengan memaksa penambahan repositori Google)
     - name: Kompilasi APK Debug
       run: |
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug -Pandroid.useAndroidX=true --no-daemon \
+          -Dorg.gradle.internal.plugins.repositories.meta=https://gradle.org \
+          -Dgradle.user.home=$HOME/.gradle
 
     # 5. Ambil hasil build dan unggah sebagai Gaming_Hub-V1
     - name: Unggah Hasil APK
