@@ -2,63 +2,51 @@ name: Build Gaming Hub APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    # 1. Ekstrak file zip yang terunggah
-    - name: Ekstrak File Proyek ZIP
-      run: |
-        if [ -f "Gaming_Hub_Project.zip" ]; then
-          echo "Menemukan Gaming_Hub_Project.zip, mengekstrak..."
-          unzip -o Gaming_Hub_Project.zip -d .
-        else
-          echo "Mencari file .zip lain..."
-          unzip -o *.zip -d . || echo "Tidak ada file zip ditemukan!"
-        fi
-        
-        # Jika hasil ekstrak terbungkus folder, keluarkan semua ke root utama
-        if [ -d "Gaming_Hub_Project" ]; then
-          echo "Memindahkan file dari dalam folder Gaming_Hub_Project ke root..."
-          mv Gaming_Hub_Project/* . || true
-          mv Gaming_Hub_Project/.* . || true
-        fi
+      - name: Buka zip proyek
+        run: |
+          if [ -f GamingHub.zip ]; then
+            unzip -q -o GamingHub.zip
+          fi
+          if [ -d GamingHub ]; then
+            echo "PROJECT_DIR=GamingHub" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_DIR=." >> "$GITHUB_ENV"
+          fi
 
-    # 2. Setup Java versi 17 (@v5)
-    - name: Set up JDK 17
-      uses: actions/setup-java@v5
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-        cache: ''
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-    # 3. Regenerasi File Gradlew Resmi
-    - name: Regenerasi File Gradlew Resmi
-      run: |
-        rm -f gradlew
-        gradle wrapper --gradle-version 8.2
-        chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
-    # 4. Kompilasi proyek menjadi APK (Dengan memaksa penambahan repositori Google)
-    - name: Kompilasi APK Debug
-      run: |
-        ./gradlew assembleDebug -Pandroid.useAndroidX=true --no-daemon \
-          -Dorg.gradle.internal.plugins.repositories.meta=https://gradle.org \
-          -Dgradle.user.home=$HOME/.gradle
+      - name: Build debug APK
+        run: |
+          cd "$PROJECT_DIR"
+          gradle assembleDebug --stacktrace
 
-    # 5. Ambil hasil build dan unggah sebagai Gaming_Hub-V1
-    - name: Unggah Hasil APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gaming_Hub-V1
-        path: |
-          app/build/outputs/apk/debug/app-debug.apk
-          **/build/outputs/apk/debug/*.apk
+      - name: Rename APK
+        run: cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" Gaming_Hub-V1.apk
+
+      - name: Upload Gaming_Hub-V1.apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaming_Hub-V1
+          path: Gaming_Hub-V1.apk
+          if-no-files-found: error
